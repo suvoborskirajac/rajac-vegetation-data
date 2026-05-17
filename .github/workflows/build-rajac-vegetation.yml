@@ -1,0 +1,66 @@
+name: Build Rajac vegetation data
+
+on:
+  workflow_dispatch:
+    inputs:
+      months:
+        description: 'Number of latest complete months to process'
+        required: false
+        default: '12'
+      yearly:
+        description: 'Also build yearly composites (true/false)'
+        required: false
+        default: 'true'
+  schedule:
+    - cron: '0 4 8 * *'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Build Sentinel-2 vegetation results
+        env:
+          GEE_PROJECT: deft-epigram-414409
+          GEE_SERVICE_ACCOUNT_JSON: ${{ secrets.GEE_SERVICE_ACCOUNT_JSON }}
+          MONTHS_BACK: ${{ github.event.inputs.months || '12' }}
+          DO_YEARLY: ${{ github.event.inputs.yearly || 'true' }}
+        run: |
+          if [ "$DO_YEARLY" = "true" ]; then
+            python processor.py --months "$MONTHS_BACK" --yearly --yearly-from 2017
+          else
+            python processor.py --months "$MONTHS_BACK"
+          fi
+
+      - name: Show generated results
+        if: always()
+        run: |
+          echo "Results tree:"
+          find public -maxdepth 3 -type f -print | sort || true
+          ls -lah public/results || true
+
+      - name: Commit generated JSON results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/results
+          if git diff --staged --quiet; then
+            echo "No result changes to commit."
+          else
+            git commit -m "Update Rajac vegetation JSON results"
+            git push
+          fi
