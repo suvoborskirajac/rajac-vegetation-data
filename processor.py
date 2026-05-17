@@ -36,7 +36,7 @@ RESULTS = ROOT / "public" / "results"
 S2_COLLECTION = "COPERNICUS/S2_SR_HARMONIZED"
 
 # Default sampling resolution for the heat-map pixels (metres).
-DEFAULT_SCALE_M = 60.0
+DEFAULT_SCALE_M = 100.0
 
 # SCL classes to mask out (keep vegetation, soil, water, unclassified).
 # 1 saturated, 3 cloud shadow, 8 cloud medium, 9 cloud high, 10 cirrus, 11 snow/ice
