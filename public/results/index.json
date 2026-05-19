@@ -212,7 +212,7 @@
   "scale_m": 100.0,
   "source": "Copernicus Sentinel-2 SR Harmonized",
   "dataset": "COPERNICUS/S2_SR_HARMONIZED",
-  "updated_at": "2026-05-19T15:00:53Z",
+  "updated_at": "2026-05-19T15:26:57Z",
   "coverage": {
     "count": 12,
     "first": "2025-05",
