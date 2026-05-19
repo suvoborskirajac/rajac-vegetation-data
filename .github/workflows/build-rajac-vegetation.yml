@@ -11,7 +11,17 @@ on:
         description: 'Also build yearly composites (true/false)'
         required: false
         default: 'true'
+      ultra_res_from:
+        description: 'Месец од којег ради 10 m обрада (YYYY-MM). Подразумевано 2026-06. За тестирaње maja: 2026-05.'
+        required: false
+        default: '2026-06'
+      do_forests:
+        description: 'Обрадити и шумске површине (137 полигона)?'
+        required: false
+        default: 'true'
   schedule:
+    # Run on the 8th of each month at 04:00 UTC — Sentinel-2 ~5-day revisit,
+    # so the previous calendar month is fully covered by then.
     - cron: '0 4 8 * *'
 
 permissions:
@@ -20,7 +30,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,11 +49,21 @@ jobs:
           GEE_SERVICE_ACCOUNT_JSON: ${{ secrets.GEE_SERVICE_ACCOUNT_JSON }}
           MONTHS_BACK: ${{ github.event.inputs.months || '12' }}
           DO_YEARLY: ${{ github.event.inputs.yearly || 'true' }}
+          ULTRA_FROM: ${{ github.event.inputs.ultra_res_from || '2026-06' }}
+          DO_FORESTS: ${{ github.event.inputs.do_forests || 'true' }}
         run: |
+          FOREST_FLAG=""
+          if [ "$DO_FORESTS" = "true" ]; then FOREST_FLAG="--forests"; fi
           if [ "$DO_YEARLY" = "true" ]; then
-            python processor.py --months "$MONTHS_BACK" --yearly --yearly-from 2017
+            python processor.py --months "$MONTHS_BACK" --yearly --yearly-from 2017 \
+              --hi-res-from 2026 --hi-res-scale 20 \
+              --ultra-res-scale 10 --ultra-res-from "$ULTRA_FROM" \
+              $FOREST_FLAG
           else
-            python processor.py --months "$MONTHS_BACK"
+            python processor.py --months "$MONTHS_BACK" \
+              --hi-res-from 2026 --hi-res-scale 20 \
+              --ultra-res-scale 10 --ultra-res-from "$ULTRA_FROM" \
+              $FOREST_FLAG
           fi
 
       - name: Show generated results
@@ -57,10 +77,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/results
+          git add public/results public/results-forests || true
           if git diff --staged --quiet; then
             echo "No result changes to commit."
           else
-            git commit -m "Update Rajac vegetation JSON results"
+            git commit -m "Update Rajac vegetation JSON results (PIO + forests)"
             git push
           fi
