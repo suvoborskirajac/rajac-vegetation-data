@@ -8,28 +8,28 @@
       "label": "04/2026",
       "kind": "monthly",
       "image_count": 13,
-      "scale_m": 100.0
+      "scale_m": 20.0
     },
     {
       "id": "2026-03",
       "label": "03/2026",
       "kind": "monthly",
       "image_count": 12,
-      "scale_m": 100.0
+      "scale_m": 20.0
     },
     {
       "id": "2026-02",
       "label": "02/2026",
       "kind": "monthly",
       "image_count": 4,
-      "scale_m": 100.0
+      "scale_m": 20.0
     },
     {
       "id": "2026-01",
       "label": "01/2026",
       "kind": "monthly",
       "image_count": 3,
-      "scale_m": 100.0
+      "scale_m": 20.0
     },
     {
       "id": "2025-12",
@@ -212,7 +212,7 @@
   "scale_m": 100.0,
   "source": "Copernicus Sentinel-2 SR Harmonized",
   "dataset": "COPERNICUS/S2_SR_HARMONIZED",
-  "updated_at": "2026-05-19T15:26:57Z",
+  "updated_at": "2026-05-19T15:44:51Z",
   "coverage": {
     "count": 12,
     "first": "2025-05",
