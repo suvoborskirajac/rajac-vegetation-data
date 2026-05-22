@@ -472,7 +472,8 @@ def build_result(period: Period, region: ee.Geometry, region_bbox: List[float], 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--months", type=int, default=12, help="Number of latest complete months to process.")
+    parser.add_argument("--months", type=int, default=12, help="Number of complete months to process.")
+    parser.add_argument("--months-skip", type=int, default=0, help="Skip the first N most-recent months before processing (default 0). Useful for non-overlapping backfill batches.")
     parser.add_argument("--yearly", action="store_true", help="Also generate yearly composites.")
     parser.add_argument("--yearly-from", type=int, default=2017, help="Earliest year for yearly composites (default 2017 — full S2A+S2B).")
     parser.add_argument("--yearly-to", type=int, default=date.today().year - 1, help="Latest year (default last complete calendar year).")
@@ -530,8 +531,16 @@ def main() -> int:
         log(f"=== {label} === bbox: {region_bbox}")
 
         # Monthly
+        # When --months-skip N is set, drop the first N most-recent candidates
+        # so this batch only processes older months (non-overlapping backfill).
+        skip = max(0, args.months_skip)
+        all_candidates = latest_candidate_periods(args.months + skip, extra_back=4)
+        target_candidates = all_candidates[skip:] if skip else all_candidates
+        if skip:
+            log(f"  --months-skip={skip}: skipping latest {skip} candidate months; processing window starts at {target_candidates[0].id if target_candidates else 'N/A'}")
+
         monthly_periods: List[Period] = []
-        for p in latest_candidate_periods(args.months, extra_back=4):
+        for p in target_candidates:
             if has_images(p, region):
                 monthly_periods.append(p)
                 log(f"  selected month: {p.id}")
@@ -635,4 +644,3 @@ if __name__ == "__main__":
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr, flush=True)
         raise
-

@@ -4,9 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       months:
-        description: 'Number of latest complete months to process'
+        description: 'Number of complete months to process'
         required: false
         default: '12'
+      months_skip:
+        description: 'Skip the first N most-recent months (за non-overlapping backfill). Пр. за Batch 2: 60.'
+        required: false
+        default: '0'
       yearly:
         description: 'Also build yearly composites (true/false)'
         required: false
@@ -30,7 +34,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 240
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -48,6 +52,7 @@ jobs:
           GEE_PROJECT: deft-epigram-414409
           GEE_SERVICE_ACCOUNT_JSON: ${{ secrets.GEE_SERVICE_ACCOUNT_JSON }}
           MONTHS_BACK: ${{ github.event.inputs.months || '12' }}
+          MONTHS_SKIP: ${{ github.event.inputs.months_skip || '0' }}
           DO_YEARLY: ${{ github.event.inputs.yearly || 'true' }}
           ULTRA_FROM: ${{ github.event.inputs.ultra_res_from || '2026-06' }}
           DO_FORESTS: ${{ github.event.inputs.do_forests || 'true' }}
@@ -55,12 +60,12 @@ jobs:
           FOREST_FLAG=""
           if [ "$DO_FORESTS" = "true" ]; then FOREST_FLAG="--forests"; fi
           if [ "$DO_YEARLY" = "true" ]; then
-            python processor.py --months "$MONTHS_BACK" --yearly --yearly-from 2017 \
+            python processor.py --months "$MONTHS_BACK" --months-skip "$MONTHS_SKIP" --yearly --yearly-from 2017 \
               --hi-res-from 2026 --hi-res-scale 20 \
               --ultra-res-scale 10 --ultra-res-from "$ULTRA_FROM" \
               $FOREST_FLAG
           else
-            python processor.py --months "$MONTHS_BACK" \
+            python processor.py --months "$MONTHS_BACK" --months-skip "$MONTHS_SKIP" \
               --hi-res-from 2026 --hi-res-scale 20 \
               --ultra-res-scale 10 --ultra-res-from "$ULTRA_FROM" \
               $FOREST_FLAG
