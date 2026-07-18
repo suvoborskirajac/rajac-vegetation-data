@@ -9,6 +9,83 @@
       "kind": "monthly",
       "image_count": 15,
       "scale_m": 20.0
+    },
+    {
+      "id": "2026-05",
+      "label": "05/2026",
+      "kind": "monthly",
+      "image_count": 15,
+      "scale_m": 20.0
+    },
+    {
+      "id": "2026-04",
+      "label": "04/2026",
+      "kind": "monthly",
+      "image_count": 13,
+      "scale_m": 20.0
+    },
+    {
+      "id": "2026-03",
+      "label": "03/2026",
+      "kind": "monthly",
+      "image_count": 12,
+      "scale_m": 20.0
+    },
+    {
+      "id": "2026-02",
+      "label": "02/2026",
+      "kind": "monthly",
+      "image_count": 4,
+      "scale_m": 20.0
+    },
+    {
+      "id": "2026-01",
+      "label": "01/2026",
+      "kind": "monthly",
+      "image_count": 3,
+      "scale_m": 20.0
+    },
+    {
+      "id": "2025-12",
+      "label": "12/2025",
+      "kind": "monthly",
+      "image_count": 10,
+      "scale_m": 100.0
+    },
+    {
+      "id": "2025-11",
+      "label": "11/2025",
+      "kind": "monthly",
+      "image_count": 9,
+      "scale_m": 100.0
+    },
+    {
+      "id": "2025-10",
+      "label": "10/2025",
+      "kind": "monthly",
+      "image_count": 8,
+      "scale_m": 100.0
+    },
+    {
+      "id": "2025-09",
+      "label": "09/2025",
+      "kind": "monthly",
+      "image_count": 15,
+      "scale_m": 100.0
+    },
+    {
+      "id": "2025-08",
+      "label": "08/2025",
+      "kind": "monthly",
+      "image_count": 17,
+      "scale_m": 100.0
+    },
+    {
+      "id": "2025-07",
+      "label": "07/2025",
+      "kind": "monthly",
+      "image_count": 16,
+      "scale_m": 100.0
     }
   ],
   "yearlyPeriods": [],
@@ -80,10 +157,10 @@
   "scale_m": 100.0,
   "source": "Copernicus Sentinel-2 SR Harmonized",
   "dataset": "COPERNICUS/S2_SR_HARMONIZED",
-  "updated_at": "2026-07-18T10:48:10Z",
+  "updated_at": "2026-07-18T11:25:17Z",
   "coverage": {
-    "count": 1,
-    "first": "2026-06",
+    "count": 12,
+    "first": "2025-07",
     "last": "2026-06",
     "yearlyCount": 0,
     "yearlyFirst": null,
