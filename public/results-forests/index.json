@@ -1,14 +1,21 @@
 {
   "ok": true,
   "label": "PIO Rajac — само шумске површине",
-  "latest": "2026-06",
+  "latest": "2026-07",
   "periods": [
+    {
+      "id": "2026-07",
+      "label": "07/2026",
+      "kind": "monthly",
+      "image_count": 16,
+      "scale_m": 10.0
+    },
     {
       "id": "2026-06",
       "label": "06/2026",
       "kind": "monthly",
       "image_count": 15,
-      "scale_m": 20.0
+      "scale_m": 10.0
     },
     {
       "id": "2026-05",
@@ -79,16 +86,64 @@
       "kind": "monthly",
       "image_count": 17,
       "scale_m": 100.0
-    },
-    {
-      "id": "2025-07",
-      "label": "07/2025",
-      "kind": "monthly",
-      "image_count": 16,
-      "scale_m": 100.0
     }
   ],
-  "yearlyPeriods": [],
+  "yearlyPeriods": [
+    {
+      "id": "2025",
+      "label": "2025. (годишњи просек)",
+      "kind": "yearly",
+      "image_count": 140
+    },
+    {
+      "id": "2024",
+      "label": "2024. (годишњи просек)",
+      "kind": "yearly",
+      "image_count": 99
+    },
+    {
+      "id": "2023",
+      "label": "2023. (годишњи просек)",
+      "kind": "yearly",
+      "image_count": 82
+    },
+    {
+      "id": "2022",
+      "label": "2022. (годишњи просек)",
+      "kind": "yearly",
+      "image_count": 92
+    },
+    {
+      "id": "2021",
+      "label": "2021. (годишњи просек)",
+      "kind": "yearly",
+      "image_count": 95
+    },
+    {
+      "id": "2020",
+      "label": "2020. (годишњи просек)",
+      "kind": "yearly",
+      "image_count": 100
+    },
+    {
+      "id": "2019",
+      "label": "2019. (годишњи просек)",
+      "kind": "yearly",
+      "image_count": 93
+    },
+    {
+      "id": "2018",
+      "label": "2018. (годишњи просек)",
+      "kind": "yearly",
+      "image_count": 88
+    },
+    {
+      "id": "2017",
+      "label": "2017. (годишњи просек)",
+      "kind": "yearly",
+      "image_count": 43
+    }
+  ],
   "indices": [
     {
       "id": "ndvi",
@@ -157,14 +212,14 @@
   "scale_m": 100.0,
   "source": "Copernicus Sentinel-2 SR Harmonized",
   "dataset": "COPERNICUS/S2_SR_HARMONIZED",
-  "updated_at": "2026-07-18T11:25:17Z",
+  "updated_at": "2026-08-08T05:43:49Z",
   "coverage": {
     "count": 12,
-    "first": "2025-07",
-    "last": "2026-06",
-    "yearlyCount": 0,
-    "yearlyFirst": null,
-    "yearlyLast": null
+    "first": "2025-08",
+    "last": "2026-07",
+    "yearlyCount": 9,
+    "yearlyFirst": "2017",
+    "yearlyLast": "2025"
   },
   "note": "Сателитски мониторинг ИСКЉУЧИВО шумских површина (~1.033 ha = 58,5% ПИО) — заснован на дигиталној карти шума ПИО „Рајац\" из 2024."
 }
