@@ -6,35 +6,48 @@ on:
       months:
         description: 'Number of complete months to process'
         required: false
-        default: '12'
+        default: '2'
       months_skip:
-        description: 'Skip the first N most-recent months (за non-overlapping backfill). Пр. за Batch 2: 60.'
+        description: 'Skip first N most-recent months. For June+July 2026 use months=2, months_skip=1.'
         required: false
-        default: '0'
+        default: '1'
       yearly:
         description: 'Also build yearly composites (true/false)'
         required: false
-        default: 'true'
+        default: 'false'
       ultra_res_from:
-        description: 'Месец од којег ради 10 m обрада (YYYY-MM). Подразумевано 2026-06. За тестирaње maja: 2026-05.'
+        description: '10 m mode threshold (YYYY-MM). Production default 2099-01 = disabled; stable 2026 maps stay at 20 m.'
         required: false
-        default: '2026-06'
+        default: '2099-01'
       do_forests:
-        description: 'Обрадити и шумске површине (137 полигона)?'
+        description: 'Process forest-only results too?'
         required: false
         default: 'true'
+
+  # When this fix is first committed, automatically rebuild only June+July 2026:
+  # on 2026-09-01 the latest complete month is August, so skip=1 + months=2
+  # selects July and June. Future scheduled runs are unaffected.
+  push:
+    paths:
+      - 'processor_safe.py'
+      - '.github/workflows/build-rajac-vegetation.yml'
+
   schedule:
-    # Run on the 8th of each month at 04:00 UTC — Sentinel-2 ~5-day revisit,
-    # so the previous calendar month is fully covered by then.
+    # 8th of each month at 04:00 UTC — previous month should be fully ingested.
     - cron: '0 4 8 * *'
 
 permissions:
   contents: write
 
+concurrency:
+  group: rajac-vegetation-build
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 240
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -51,25 +64,79 @@ jobs:
         env:
           GEE_PROJECT: deft-epigram-414409
           GEE_SERVICE_ACCOUNT_JSON: ${{ secrets.GEE_SERVICE_ACCOUNT_JSON }}
-          MONTHS_BACK: ${{ github.event.inputs.months || '12' }}
-          MONTHS_SKIP: ${{ github.event.inputs.months_skip || '0' }}
-          DO_YEARLY: ${{ github.event.inputs.yearly || 'true' }}
-          ULTRA_FROM: ${{ github.event.inputs.ultra_res_from || '2026-06' }}
+
+          # A push of this safety patch repairs June+July only.
+          # Scheduled runs keep the normal 12-month refresh.
+          MONTHS_BACK: ${{ github.event_name == 'push' && '2' || github.event.inputs.months || '12' }}
+          MONTHS_SKIP: ${{ github.event_name == 'push' && '1' || github.event.inputs.months_skip || '0' }}
+          DO_YEARLY: ${{ github.event_name == 'push' && 'false' || github.event.inputs.yearly || 'true' }}
+
+          # 20 m is the production resolution for the combined index package.
+          # 10 m remains available only as an explicit manual experiment.
+          ULTRA_FROM: ${{ github.event.inputs.ultra_res_from || '2099-01' }}
           DO_FORESTS: ${{ github.event.inputs.do_forests || 'true' }}
+
         run: |
           FOREST_FLAG=""
           if [ "$DO_FORESTS" = "true" ]; then FOREST_FLAG="--forests"; fi
+
+          echo "Event: ${{ github.event_name }}"
+          echo "Months: $MONTHS_BACK; skip: $MONTHS_SKIP; yearly: $DO_YEARLY"
+          echo "20 m production mode; 10 m threshold: $ULTRA_FROM"
+
           if [ "$DO_YEARLY" = "true" ]; then
-            python processor.py --months "$MONTHS_BACK" --months-skip "$MONTHS_SKIP" --yearly --yearly-from 2017 \
+            python processor_safe.py --months "$MONTHS_BACK" --months-skip "$MONTHS_SKIP" \
+              --yearly --yearly-from 2017 \
               --hi-res-from 2026 --hi-res-scale 20 \
               --ultra-res-scale 10 --ultra-res-from "$ULTRA_FROM" \
               $FOREST_FLAG
           else
-            python processor.py --months "$MONTHS_BACK" --months-skip "$MONTHS_SKIP" \
+            python processor_safe.py --months "$MONTHS_BACK" --months-skip "$MONTHS_SKIP" \
               --hi-res-from 2026 --hi-res-scale 20 \
               --ultra-res-scale 10 --ultra-res-from "$ULTRA_FROM" \
               $FOREST_FLAG
           fi
+
+      - name: Validate June and July repair on patch push
+        if: github.event_name == 'push'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          required = ("2026-06", "2026-07")
+          result_sets = (
+              Path("public/results"),
+              Path("public/results-forests"),
+          )
+
+          errors = []
+          for result_dir in result_sets:
+              for period in required:
+                  p = result_dir / f"{period}.json"
+                  if not p.exists():
+                      errors.append(f"missing: {p}")
+                      continue
+                  data = json.loads(p.read_text(encoding="utf-8"))
+                  meta = data.get("meta") or {}
+                  scale = float(meta.get("scale_m") or 0)
+                  validation = meta.get("sampling_validation") or {}
+                  if scale != 20.0:
+                      errors.append(f"{p}: scale_m={scale}, expected 20")
+                  if validation.get("status") != "ok":
+                      errors.append(f"{p}: sampling_validation is not ok")
+                  ratio = float(validation.get("coverage_ratio") or 0)
+                  if ratio < 0.90:
+                      errors.append(f"{p}: coverage_ratio={ratio:.3f} < 0.90")
+
+          if errors:
+              print("VALIDATION FAILED:")
+              for e in errors:
+                  print(" -", e)
+              raise SystemExit(1)
+
+          print("VALIDATION OK: June and July 2026 are complete 20 m products.")
+          PY
 
       - name: Show generated results
         if: always()
@@ -77,6 +144,7 @@ jobs:
           echo "Results tree:"
           find public -maxdepth 3 -type f -print | sort || true
           ls -lah public/results || true
+          ls -lah public/results-forests || true
 
       - name: Commit generated JSON results
         run: |
@@ -86,6 +154,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No result changes to commit."
           else
-            git commit -m "Update Rajac vegetation JSON results (PIO + forests)"
+            git commit -m "Repair Rajac vegetation maps at stable 20 m resolution"
             git push
           fi
