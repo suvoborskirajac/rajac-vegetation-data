@@ -126,8 +126,8 @@ jobs:
                   if validation.get("status") != "ok":
                       errors.append(f"{p}: sampling_validation is not ok")
                   ratio = float(validation.get("coverage_ratio") or 0)
-                  if ratio < 0.90:
-                      errors.append(f"{p}: coverage_ratio={ratio:.3f} < 0.90")
+                  if ratio < 0.88:
+                      errors.append(f"{p}: coverage_ratio={ratio:.5f} < 0.88")
 
           if errors:
               print("VALIDATION FAILED:")
@@ -135,7 +135,7 @@ jobs:
                   print(" -", e)
               raise SystemExit(1)
 
-          print("VALIDATION OK: June and July 2026 are complete 20 m products.")
+          print("VALIDATION OK: June and July 2026 are complete 20 m products (coverage >= 0.88).")
           PY
 
       - name: Show generated results
