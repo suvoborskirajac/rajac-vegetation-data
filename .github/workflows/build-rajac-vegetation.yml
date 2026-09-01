@@ -138,6 +138,41 @@ jobs:
           print("VALIDATION OK: June and July 2026 are complete 20 m products (coverage >= 0.88).")
           PY
 
+      - name: Validate historical periods are preserved
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          errors = []
+          for p in (Path("public/results/index.json"), Path("public/results-forests/index.json")):
+              data = json.loads(p.read_text(encoding="utf-8"))
+              months = data.get("periods") or []
+              years = data.get("yearlyPeriods") or []
+              month_ids = {x.get("id") for x in months}
+              year_ids = {x.get("id") for x in years}
+
+              # Existing repository history starts well before the repaired
+              # June/July 2026 pair. These checks prevent a partial run from
+              # silently shrinking the dropdown again.
+              if len(months) < 20:
+                  errors.append(f"{p}: only {len(months)} monthly periods")
+              if len(years) < 5:
+                  errors.append(f"{p}: only {len(years)} yearly periods")
+              if "2026-05" not in month_ids or "2025-12" not in month_ids:
+                  errors.append(f"{p}: historical monthly periods missing")
+              if "2025" not in year_ids or "2024" not in year_ids:
+                  errors.append(f"{p}: historical yearly periods missing")
+
+          if errors:
+              print("HISTORY VALIDATION FAILED:")
+              for e in errors:
+                  print(" -", e)
+              raise SystemExit(1)
+
+          print("HISTORY VALIDATION OK: full monthly/yearly dropdown history preserved.")
+          PY
+
       - name: Show generated results
         if: always()
         run: |
@@ -154,6 +189,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No result changes to commit."
           else
-            git commit -m "Repair Rajac vegetation maps at stable 20 m resolution"
+            git commit -m "Repair vegetation maps and restore full period index"
             git push
           fi
