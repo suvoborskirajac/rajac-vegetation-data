@@ -18,6 +18,9 @@ from __future__ import annotations
 
 import sys
 import time
+import re
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import ee
@@ -229,6 +232,133 @@ def build_result_safe(
     return result
 
 
+_MONTH_FILE_RE = re.compile(r"^\d{4}-\d{2}\.json$")
+_YEAR_FILE_RE = re.compile(r"^\d{4}\.json$")
+
+
+def _read_result_entry(path: Path, kind: str) -> Dict[str, Any] | None:
+    """Read just enough metadata from one existing result JSON for index.json.
+
+    Historical result files are the source of truth for dropdown availability.
+    A partial/backfill run must never erase periods that were not processed in
+    that particular invocation.
+    """
+    try:
+        data = base.load_json(path)
+    except Exception as exc:
+        base.log(f"  WARN index rebuild: cannot read {path}: {exc}")
+        return None
+
+    if not isinstance(data, dict) or not data.get("ok", False):
+        base.log(f"  WARN index rebuild: skipping invalid result {path}")
+        return None
+
+    meta = data.get("meta") or {}
+    period_id = str(meta.get("id") or path.stem)
+    label = str(meta.get("label") or (
+        f"{period_id[5:7]}/{period_id[:4]}"
+        if kind == "monthly" and len(period_id) == 7
+        else f"{period_id}. (годишњи просек)"
+    ))
+
+    image_count = meta.get("image_count")
+    try:
+        image_count = int(image_count or 0)
+    except Exception:
+        image_count = 0
+
+    entry: Dict[str, Any] = {
+        "id": period_id,
+        "label": label,
+        "kind": kind,
+        "image_count": image_count,
+    }
+
+    # Preserve the actual resolution of each historical period when present.
+    scale = meta.get("scale_m")
+    if scale is not None:
+        try:
+            entry["scale_m"] = float(scale)
+        except Exception:
+            pass
+
+    return entry
+
+
+def rebuild_complete_index(results_dir: Path) -> None:
+    """Rebuild index.json from every valid result file already on disk.
+
+    This makes partial runs (e.g. only June+July repair) safe: they can update
+    selected JSON files, but cannot remove older months/years from the frontend
+    dropdown merely because those periods were not reprocessed in the run.
+    """
+    results_dir = Path(results_dir)
+    index_path = results_dir / "index.json"
+
+    try:
+        current = base.load_json(index_path) if index_path.exists() else {}
+    except Exception:
+        current = {}
+    if not isinstance(current, dict):
+        current = {}
+
+    monthly: List[Dict[str, Any]] = []
+    yearly: List[Dict[str, Any]] = []
+
+    for path in results_dir.glob("*.json"):
+        if path.name == "index.json":
+            continue
+        if _MONTH_FILE_RE.match(path.name):
+            entry = _read_result_entry(path, "monthly")
+            if entry:
+                monthly.append(entry)
+        elif _YEAR_FILE_RE.match(path.name):
+            entry = _read_result_entry(path, "yearly")
+            if entry:
+                yearly.append(entry)
+
+    # ISO-style ids sort chronologically as strings.
+    monthly.sort(key=lambda x: x["id"], reverse=True)
+    yearly.sort(key=lambda x: x["id"], reverse=True)
+
+    # Deduplicate defensively by period id.
+    def dedupe(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        out = []
+        seen = set()
+        for entry in entries:
+            pid = entry["id"]
+            if pid in seen:
+                continue
+            seen.add(pid)
+            out.append(entry)
+        return out
+
+    monthly = dedupe(monthly)
+    yearly = dedupe(yearly)
+
+    current["ok"] = True
+    current["latest"] = monthly[0]["id"] if monthly else None
+    current["periods"] = monthly
+    current["yearlyPeriods"] = yearly
+    current["updated_at"] = datetime.now(timezone.utc).isoformat(
+        timespec="seconds"
+    ).replace("+00:00", "Z")
+    current["coverage"] = {
+        "count": len(monthly),
+        "first": monthly[-1]["id"] if monthly else None,
+        "last": monthly[0]["id"] if monthly else None,
+        "yearlyCount": len(yearly),
+        "yearlyFirst": yearly[-1]["id"] if yearly else None,
+        "yearlyLast": yearly[0]["id"] if yearly else None,
+    }
+
+    base.write_json(index_path, current)
+    base.log(
+        f"INDEX RESTORED {results_dir}: "
+        f"{len(monthly)} monthly + {len(yearly)} yearly periods"
+    )
+
+
 # Monkey-patch only the safety-critical functions. All existing file formats,
 # statistics, period selection and forest handling remain in processor.py.
 base.sample_pixels = sample_pixels_safe
@@ -237,7 +367,14 @@ base.build_result = build_result_safe
 
 if __name__ == "__main__":
     try:
-        raise SystemExit(base.main())
+        rc = base.main()
+        if rc == 0:
+            # processor.py intentionally writes an index containing only the
+            # periods handled by the current run. Restore the complete history
+            # from all result JSONs before GitHub commits the output.
+            rebuild_complete_index(base.RESULTS)
+            rebuild_complete_index(base.RESULTS_FORESTS)
+        raise SystemExit(rc)
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr, flush=True)
         raise
