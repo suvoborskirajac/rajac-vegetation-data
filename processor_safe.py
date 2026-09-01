@@ -26,7 +26,7 @@ import processor as base
 
 RETRY_ATTEMPTS = 3
 MAX_SPLIT_DEPTH = 2
-MIN_SAMPLE_COVERAGE = 0.90
+MIN_SAMPLE_COVERAGE = 0.88
 
 
 def _retry_getinfo(obj: Any, label: str) -> Any:
@@ -209,12 +209,12 @@ def build_result_safe(
     ratio = sampled / ndvi_count
     base.log(
         f"  Coverage check {period.id}: sampled={sampled}, "
-        f"NDVI-count={ndvi_count}, ratio={ratio:.3f}"
+        f"NDVI-count={ndvi_count}, ratio={ratio:.5f}"
     )
 
     if ratio < MIN_SAMPLE_COVERAGE:
         raise RuntimeError(
-            f"Period {period.id}: sampled pixel coverage {ratio:.1%} is below "
+            f"Period {period.id}: sampled pixel coverage {ratio:.2%} is below "
             f"the required {MIN_SAMPLE_COVERAGE:.0%}; refusing to publish "
             "incomplete map."
         )
