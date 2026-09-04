@@ -1,8 +1,15 @@
 {
   "ok": true,
   "label": "PIO Rajac (full)",
-  "latest": "2026-07",
+  "latest": "2026-08",
   "periods": [
+    {
+      "id": "2026-08",
+      "label": "08/2026",
+      "kind": "monthly",
+      "image_count": 17,
+      "scale_m": 20.0
+    },
     {
       "id": "2026-07",
       "label": "07/2026",
@@ -347,11 +354,11 @@
   "scale_m": 100.0,
   "source": "Copernicus Sentinel-2 SR Harmonized",
   "dataset": "COPERNICUS/S2_SR_HARMONIZED",
-  "updated_at": "2026-09-01T18:37:32Z",
+  "updated_at": "2026-09-04T13:23:56Z",
   "coverage": {
-    "count": 30,
+    "count": 31,
     "first": "2024-02",
-    "last": "2026-07",
+    "last": "2026-08",
     "yearlyCount": 9,
     "yearlyFirst": "2017",
     "yearlyLast": "2025"
